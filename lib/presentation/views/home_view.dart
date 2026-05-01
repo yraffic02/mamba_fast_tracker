@@ -6,6 +6,8 @@ import '../viewmodels/fasting_viewmodel.dart';
 import '../viewmodels/meal_viewmodel.dart';
 import 'add_meal_view.dart';
 import 'history_view.dart';
+import 'meals_list_view.dart';
+import 'settings_view.dart';
 import 'auth_view.dart';
 
 class HomeView extends StatefulWidget {
@@ -253,47 +255,46 @@ class _HomeViewState extends State<HomeView> {
                     children: [
                       const Text('Nenhuma refeição registrada hoje'),
                       const SizedBox(height: 8),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const MealsListView(),
-                            ),
-                          );
-                        },
-                        child: const Text('Ver todas as refeições'),
-                      ),
+                      _buildViewAllMealsButton(),
                     ],
                   )
-                else ...[
-                  ...meals.map((meal) => ListTile(
-                        title: Text(meal.name),
-                        subtitle: Text(
-                          DateFormat('HH:mm').format(meal.timestamp),
-                        ),
-                        trailing: Text('${meal.calories} cal'),
-                      )),
-                  const SizedBox(height: 8),
-                  Center(
-                    child: TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const MealsListView(),
-                          ),
-                        );
-                      },
-                      child: const Text('Ver todas as refeições'),
-                    ),
+                else
+                  Column(
+                    children: [
+                      ...meals.map((meal) => ListTile(
+                            title: Text(meal.name),
+                            subtitle: Text(
+                              DateFormat('HH:mm').format(meal.timestamp),
+                            ),
+                            trailing: Text('${meal.calories} cal'),
+                          )),
+                      const SizedBox(height: 8),
+                      _buildViewAllMealsButton(),
+                    ],
                   ),
-                ],
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildViewAllMealsButton() {
+    return Center(
+      child: TextButton(
+        onPressed: () {
+          if (_userId != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => MealsListView(userId: _userId!),
+              ),
+            );
+          }
+        },
+        child: const Text('Ver todas as refeições'),
+      ),
     );
   }
 }

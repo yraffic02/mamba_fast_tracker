@@ -3,11 +3,11 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/meal_entity.dart';
 import '../viewmodels/meal_viewmodel.dart';
-import '../viewmodels/auth_viewmodel.dart';
 import 'edit_meal_view.dart';
 
 class MealsListView extends StatefulWidget {
-  const MealsListView({super.key});
+  final int userId;
+  const MealsListView({super.key, required this.userId});
 
   @override
   State<MealsListView> createState() => _MealsListViewState();
@@ -15,21 +15,16 @@ class MealsListView extends StatefulWidget {
 
 class _MealsListViewState extends State<MealsListView> {
   DateTime _selectedDate = DateTime.now();
-  int? _userId;
 
   @override
   void initState() {
     super.initState();
-    _loadUserId();
-  }
-
-  Future<void> _loadUserId() async {
-    final authViewModel = Provider.of<AuthViewModel>(context, listen: false);
-    _userId = await authViewModel.getLoggedUserId();
-    if (_userId != null && mounted) {
-      Provider.of<MealViewModel>(context, listen: false)
-          .loadMeals(_userId!, date: _selectedDate);
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Provider.of<MealViewModel>(context, listen: false)
+            .loadMeals(widget.userId, date: _selectedDate);
+      }
+    });
   }
 
   Future<void> _pickDate(BuildContext context) async {
@@ -43,10 +38,8 @@ class _MealsListViewState extends State<MealsListView> {
       setState(() {
         _selectedDate = picked;
       });
-      if (_userId != null) {
-        Provider.of<MealViewModel>(context, listen: false)
-            .loadMeals(_userId!, date: _selectedDate);
-      }
+      Provider.of<MealViewModel>(context, listen: false)
+          .loadMeals(widget.userId, date: _selectedDate);
     }
   }
 
@@ -123,20 +116,18 @@ class _MealsListViewState extends State<MealsListView> {
                             IconButton(
                               icon: const Icon(Icons.edit, color: Colors.blue),
                               onPressed: () async {
-                                final updated = await Navigator.push(
+                                final result = await Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) =>
                                         EditMealView(meal: meal),
                                   ),
                                 );
-                                if (updated == true && _userId != null) {
-                                  if (mounted) {
-                                    Provider.of<MealViewModel>(context,
-                                            listen: false)
-                                        .loadMeals(_userId!,
-                                            date: _selectedDate);
-                                  }
+                                if (result == true && mounted) {
+                                  Provider.of<MealViewModel>(context,
+                                          listen: false)
+                                      .loadMeals(widget.userId,
+                                          date: _selectedDate);
                                 }
                               },
                             ),
@@ -163,10 +154,10 @@ class _MealsListViewState extends State<MealsListView> {
                                     ],
                                   ),
                                 );
-                                if (confirmed == true && _userId != null) {
+                                if (confirmed == true) {
                                   await viewModel.deleteMeal(
                                     meal.id!,
-                                    _userId!,
+                                    widget.userId,
                                     meal.timestamp,
                                   );
                                 }

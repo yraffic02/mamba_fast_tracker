@@ -12,7 +12,7 @@ class NotificationService {
   NotificationService._init();
 
   Future<void> initialize() async {
-    await tz.initializeTimeZones();
+    tz.initializeTimeZones();
     tz.setLocalLocation(tz.getLocation('America/Sao_Paulo'));
 
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -82,8 +82,6 @@ class NotificationService {
       tzScheduledDate,
       details,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
     );
   }
 
