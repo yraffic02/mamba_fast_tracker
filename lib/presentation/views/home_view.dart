@@ -44,6 +44,17 @@ class _HomeViewState extends State<HomeView> {
         title: const Text('Mamba Fast Tracker'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingsView(),
+                ),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await Provider.of<AuthViewModel>(context, listen: false).logout();
@@ -111,6 +122,14 @@ class _HomeViewState extends State<HomeView> {
       builder: (context, viewModel, child) {
         final isFasting = viewModel.isFasting;
         final elapsed = viewModel.elapsedTime;
+        final remaining = viewModel.remainingTime;
+        final goalReached = viewModel.isGoalReached;
+        final protocol = viewModel.protocol;
+
+        final progress = elapsed.inSeconds /
+            (protocol.fastingDuration.inSeconds == 0
+                ? 1
+                : protocol.fastingDuration.inSeconds);
 
         return Card(
           child: Padding(
@@ -118,9 +137,19 @@ class _HomeViewState extends State<HomeView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Timer de Jejum',
-                  style: Theme.of(context).textTheme.headlineSmall,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Timer de Jejum',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    Chip(
+                      label: Text(protocol.name),
+                      backgroundColor:
+                          Theme.of(context).colorScheme.primaryContainer,
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 if (isFasting) ...[
@@ -128,6 +157,31 @@ class _HomeViewState extends State<HomeView> {
                     '${elapsed.inHours}h ${elapsed.inMinutes % 60}m ${elapsed.inSeconds % 60}s',
                     style: Theme.of(context).textTheme.displaySmall,
                   ),
+                  if (!goalReached) ...[
+                    const SizedBox(height: 8),
+                    LinearProgressIndicator(
+                      value: progress.clamp(0.0, 1.0),
+                      minHeight: 8,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Restam: ${remaining.inHours}h ${remaining.inMinutes % 60}m',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Meta atingida! 🎉',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(
+                            color: Colors.green,
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: _userId != null
@@ -145,7 +199,10 @@ class _HomeViewState extends State<HomeView> {
                     child: const Text('Finalizar Jejum'),
                   ),
                 ] else ...[
-                  const Text('Nenhuma sessão de jejum ativa'),
+                  Text(
+                    'Protocolo: ${protocol.name} (${protocol.fastingHours}h jejum)',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: _userId != null

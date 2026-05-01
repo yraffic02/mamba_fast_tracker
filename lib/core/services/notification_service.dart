@@ -1,4 +1,6 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 
 typedef NotificationCallback = void Function(NotificationResponse);
 
@@ -10,6 +12,9 @@ class NotificationService {
   NotificationService._init();
 
   Future<void> initialize() async {
+    await tz.initializeTimeZones();
+    tz.setLocalLocation(tz.getLocation('America/Sao_Paulo'));
+
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings();
     const settings = InitializationSettings(
@@ -47,17 +52,63 @@ class NotificationService {
     );
   }
 
+  Future<void> scheduleNotification(
+    String title,
+    String body,
+    DateTime scheduledDate,
+  ) async {
+    final tz.TZDateTime tzScheduledDate = tz.TZDateTime.from(
+      scheduledDate,
+      tz.local,
+    );
+
+    const androidDetails = AndroidNotificationDetails(
+      'mamba_fast_tracker',
+      'Mamba Fast Tracker',
+      channelDescription: 'Notifications for fasting tracker',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+    const iosDetails = DarwinNotificationDetails();
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await _notifications.zonedSchedule(
+      DateTime.now().millisecond,
+      title,
+      body,
+      tzScheduledDate,
+      details,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
+  }
+
+  Future<void> cancelAllNotifications() async {
+    await _notifications.cancelAll();
+  }
+
   Future<void> notifyFastingStarted() async {
     await showNotification(
-      'Fasting Started',
-      'Your fasting session has begun. Good luck!',
+      'Jejum Iniciado',
+      'Seu jejum começou. Boa sorte!',
     );
   }
 
   Future<void> notifyFastingEnded() async {
     await showNotification(
-      'Fasting Completed',
-      'Congratulations! You completed your fasting session.',
+      'Jejum Concluído',
+      'Parabéns! Você completou seu jejum.',
+    );
+  }
+
+  Future<void> notifyFastingGoalReached() async {
+    await showNotification(
+      'Meta Atingida!',
+      'Parabéns! Você atingiu sua meta de jejum.',
     );
   }
 }
