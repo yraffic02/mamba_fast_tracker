@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/meal_entity.dart';
 import '../viewmodels/meal_viewmodel.dart';
+import '../viewmodels/auth_viewmodel.dart';
 
 class MealsListView extends StatefulWidget {
   const MealsListView({super.key});
@@ -13,6 +14,22 @@ class MealsListView extends StatefulWidget {
 
 class _MealsListViewState extends State<MealsListView> {
   DateTime _selectedDate = DateTime.now();
+  int? _userId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserId();
+  }
+
+  Future<void> _loadUserId() async {
+    final authViewModel = Provider.of<AuthViewModel>(context, listen: false);
+    _userId = await authViewModel.getLoggedUserId();
+    if (_userId != null && mounted) {
+      Provider.of<MealViewModel>(context, listen: false)
+          .loadMeals(_userId!, date: _selectedDate);
+    }
+  }
 
   Future<void> _pickDate(BuildContext context) async {
     final picked = await showDatePicker(
@@ -25,11 +42,9 @@ class _MealsListViewState extends State<MealsListView> {
       setState(() {
         _selectedDate = picked;
       });
-      final userId =
-          Provider.of<MealViewModel>(context, listen: false).getLoggedUserId();
-      if (userId != null) {
+      if (_userId != null) {
         Provider.of<MealViewModel>(context, listen: false)
-            .loadMeals(userId, date: _selectedDate);
+            .loadMeals(_userId!, date: _selectedDate);
       }
     }
   }
@@ -138,18 +153,12 @@ class _MealsListViewState extends State<MealsListView> {
                                     ],
                                   ),
                                 );
-                                if (confirmed == true) {
-                                  final userId =
-                                      Provider.of<AuthViewModel>(context,
-                                              listen: false)
-                                          .getLoggedUserId();
-                                  if (userId != null && mounted) {
-                                    await viewModel.deleteMeal(
-                                      meal.id!,
-                                      userId,
-                                      meal.timestamp,
-                                    );
-                                  }
+                                if (confirmed == true && _userId != null) {
+                                  await viewModel.deleteMeal(
+                                    meal.id!,
+                                    _userId!,
+                                    meal.timestamp,
+                                  );
                                 }
                               },
                             ),
