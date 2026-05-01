@@ -94,6 +94,12 @@ class FastingViewModel extends ChangeNotifier {
   }
 
   Future<bool> startFasting(int userId) async {
+    // Validações
+    final scheduledStart = await _sessionService.getScheduledStartTime();
+    if (scheduledStart == null) {
+      return false; // Não permite iniciar sem horário agendado
+    }
+
     _isLoading = true;
     notifyListeners();
 
@@ -115,6 +121,32 @@ class FastingViewModel extends ChangeNotifier {
               fiveMinBeforeEnd,
             );
           }
+          // 3. Na hora de terminar
+          await _notificationService.scheduleNotification(
+            'Jejum Concluído',
+            'Seu jejum de ${protocol.name} terminou!',
+            endTime,
+          );
+          // 4. 5min antes de começar (se agendado)
+          final fiveMinBeforeStart = scheduledStart.subtract(const Duration(minutes: 5));
+          if (fiveMinBeforeStart.isAfter(DateTime.now())) {
+            await _notificationService.scheduleNotification(
+              'Jejum Começa em 5min',
+              'Seu jejum de ${protocol.name} começa em 5 minutos!',
+              fiveMinBeforeStart,
+            );
+          }
+        }
+      } catch (_) {}
+      await _sessionService.clearScheduledStartTime();
+      await loadActiveSession(userId);
+      return true;
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
           // 3. Na hora de terminar
           await _notificationService.scheduleNotification(
             'Jejum Concluído',
