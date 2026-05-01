@@ -249,8 +249,24 @@ class _HomeViewState extends State<HomeView> {
                 ),
                 const SizedBox(height: 16),
                 if (meals.isEmpty)
-                  const Text('Nenhuma refeição registrada hoje')
-                else
+                  Column(
+                    children: [
+                      const Text('Nenhuma refeição registrada hoje'),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const MealsListView(),
+                            ),
+                          );
+                        },
+                        child: const Text('Ver todas as refeições'),
+                      ),
+                    ],
+                  )
+                else ...[
                   ...meals.map((meal) => ListTile(
                         title: Text(meal.name),
                         subtitle: Text(
@@ -258,6 +274,21 @@ class _HomeViewState extends State<HomeView> {
                         ),
                         trailing: Text('${meal.calories} cal'),
                       )),
+                  const SizedBox(height: 8),
+                  Center(
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const MealsListView(),
+                          ),
+                        );
+                      },
+                      child: const Text('Ver todas as refeições'),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
