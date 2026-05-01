@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../../domain/entities/meal_entity.dart';
 import '../viewmodels/meal_viewmodel.dart';
 import 'edit_meal_view.dart';
 
