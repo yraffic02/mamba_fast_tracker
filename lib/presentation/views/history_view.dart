@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../domain/entities/fasting_session_entity.dart';
 import '../../domain/entities/fasting_protocol_entity.dart';
 import '../viewmodels/auth_viewmodel.dart';
+import '../viewmodels/meal_viewmodel.dart';
 import '../viewmodels/fasting_viewmodel.dart';
 import '../widgets/fasting_chart.dart';
 import '../widgets/calories_chart.dart';
@@ -62,10 +63,10 @@ class _HistoryViewState extends State<HistoryView> {
               child: TabBarView(
                 children: [
                   _MealsHistoryTab(userId: _userId!),
-                  if (_lastSession != null)
+                  if (_lastSession != null && _protocol != null)
                     _FastingHistoryTab(
                       session: _lastSession!,
-                      protocol: _protocol ?? FastingProtocol.defaultProtocol,
+                      protocol: _protocol!,
                     )
                   else
                     const Center(child: Text('Nenhum histórico de jejum')),
@@ -93,7 +94,8 @@ class _MealsHistoryTabState extends State<_MealsHistoryTab> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        Provider.of<MealViewModel>(context, listen: false).loadMeals(widget.userId);
+        Provider.of<MealViewModel>(context, listen: false)
+            .loadMeals(widget.userId);
       }
     });
   }
@@ -132,9 +134,8 @@ class _MealsHistoryTabState extends State<_MealsHistoryTab> {
                 final meal = meals[index];
                 return ListTile(
                   title: Text(meal.name),
-                  subtitle: Text(
-                    DateFormat('dd/MM/yyyy HH:mm').format(meal.timestamp),
-                  ),
+                  subtitle:
+                      Text(DateFormat('dd/MM/yyyy HH:mm').format(meal.timestamp)),
                   trailing: Text('${meal.calories} cal'),
                 );
               },
@@ -159,7 +160,7 @@ class _FastingHistoryTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final isCompleted = session.endTime != null;
 
-    // Calcula duraço real
+    // Calcula duração real
     final actualDuration = isCompleted
         ? session.endTime!.difference(session.startTime)
         : DateTime.now().difference(session.startTime);
@@ -171,7 +172,7 @@ class _FastingHistoryTab extends StatelessWidget {
     bool isWithinMeta;
 
     if (isCompleted) {
-      // Finalizou: verifica se atingiu a duraço do protocolo (com margem)
+      // Finalizou: verifica se atingiu a duração do protocolo (com margem)
       isWithinMeta =
           actualDuration >= protocol.fastingDuration - margin;
     } else {

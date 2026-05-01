@@ -59,6 +59,18 @@ class FastingViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<DateTime?> getScheduledStartTime() async {
+    return await _sessionService.getScheduledStartTime();
+  }
+
+  Future<void> saveScheduledStartTime(DateTime startTime) async {
+    await _sessionService.saveScheduledStartTime(startTime);
+  }
+
+  Future<void> clearScheduledStartTime() async {
+    await _sessionService.clearScheduledStartTime();
+  }
+
   void _startTimer() {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -94,10 +106,9 @@ class FastingViewModel extends ChangeNotifier {
   }
 
   Future<bool> startFasting(int userId) async {
-    // Validações
     final scheduledStart = await _sessionService.getScheduledStartTime();
     if (scheduledStart == null) {
-      return false; // Não permite iniciar sem horário agendado
+      return false;
     }
 
     _isLoading = true;
@@ -107,12 +118,12 @@ class FastingViewModel extends ChangeNotifier {
       await _startFasting(userId);
       try {
         await _notificationService.notifyFastingStarted();
+
         final session = _currentSession;
         if (session != null) {
           final endTime = session.startTime.add(protocol.fastingDuration);
-          // 4 notificações
-          // 1. Na hora de começar (já foi enviada acima)
-          // 2. 5min antes de terminar
+
+          // 5min antes de terminar
           final fiveMinBeforeEnd = endTime.subtract(const Duration(minutes: 5));
           if (fiveMinBeforeEnd.isAfter(DateTime.now())) {
             await _notificationService.scheduleNotification(
@@ -121,13 +132,15 @@ class FastingViewModel extends ChangeNotifier {
               fiveMinBeforeEnd,
             );
           }
-          // 3. Na hora de terminar
+
+          // Na hora de terminar
           await _notificationService.scheduleNotification(
             'Jejum Concluído',
             'Seu jejum de ${protocol.name} terminou!',
             endTime,
           );
-          // 4. 5min antes de começar (se agendado)
+
+          // 5min antes de começar (se agendado)
           final fiveMinBeforeStart = scheduledStart.subtract(const Duration(minutes: 5));
           if (fiveMinBeforeStart.isAfter(DateTime.now())) {
             await _notificationService.scheduleNotification(
@@ -139,34 +152,6 @@ class FastingViewModel extends ChangeNotifier {
         }
       } catch (_) {}
       await _sessionService.clearScheduledStartTime();
-      await loadActiveSession(userId);
-      return true;
-    } catch (e) {
-      _isLoading = false;
-      notifyListeners();
-      return false;
-    }
-  }
-          // 3. Na hora de terminar
-          await _notificationService.scheduleNotification(
-            'Jejum Concluído',
-            'Seu jejum de ${protocol.name} terminou!',
-            endTime,
-          );
-          // 4. 5min antes de começar (se agendado)
-          final scheduledStart = await _sessionService.getScheduledStartTime();
-          if (scheduledStart != null) {
-            final fiveMinBeforeStart = scheduledStart.subtract(const Duration(minutes: 5));
-            if (fiveMinBeforeStart.isAfter(DateTime.now())) {
-              await _notificationService.scheduleNotification(
-                'Jejum Começa em 5min',
-                'Seu jejum de ${protocol.name} começa em 5 minutos!',
-                fiveMinBeforeStart,
-              );
-            }
-          }
-        }
-      } catch (_) {}
       await loadActiveSession(userId);
       return true;
     } catch (e) {
