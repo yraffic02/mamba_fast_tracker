@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../domain/entities/fasting_session_entity.dart';
 import '../../domain/usecases/fasting_usecases.dart';
@@ -13,6 +14,7 @@ class FastingViewModel extends ChangeNotifier {
 
   FastingSessionEntity? _currentSession;
   bool _isLoading = false;
+  Timer? _timer;
 
   FastingSessionEntity? get currentSession => _currentSession;
   bool get isLoading => _isLoading;
@@ -23,11 +25,29 @@ class FastingViewModel extends ChangeNotifier {
     return _getElapsedTime(_currentSession!) ?? Duration.zero;
   }
 
+  void _startTimer() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (_currentSession != null && _currentSession!.endTime == null) {
+        notifyListeners();
+      }
+    });
+  }
+
+  void _stopTimer() {
+    _timer?.cancel();
+    _timer = null;
+  }
+
   Future<void> loadActiveSession(int userId) async {
     _isLoading = true;
     notifyListeners();
 
     _currentSession = await _getActiveSession(userId);
+
+    if (_currentSession != null && _currentSession!.endTime == null) {
+      _startTimer();
+    }
 
     _isLoading = false;
     notifyListeners();
@@ -57,6 +77,7 @@ class FastingViewModel extends ChangeNotifier {
 
     try {
       await _endFasting(userId);
+      _stopTimer();
       try {
         await _notificationService.notifyFastingEnded();
       } catch (_) {}
@@ -73,5 +94,11 @@ class FastingViewModel extends ChangeNotifier {
 
   Future<FastingSessionEntity?> getLastSession(int userId) async {
     return await _getLastSession(userId);
+  }
+
+  @override
+  void dispose() {
+    _stopTimer();
+    super.dispose();
   }
 }
