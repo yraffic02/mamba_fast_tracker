@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../domain/entities/fasting_session_entity.dart';
+import '../../domain/entities/fasting_protocol_entity.dart';
 import '../viewmodels/auth_viewmodel.dart';
-import '../viewmodels/meal_viewmodel.dart';
 import '../viewmodels/fasting_viewmodel.dart';
 import '../widgets/fasting_chart.dart';
 import '../widgets/calories_chart.dart';
@@ -17,17 +17,25 @@ class HistoryView extends StatefulWidget {
 
 class _HistoryViewState extends State<HistoryView> {
   int? _userId;
+  FastingSessionEntity? _lastSession;
+  FastingProtocol? _protocol;
 
   @override
   void initState() {
     super.initState();
-    _loadUserId();
+    _loadData();
   }
 
-  Future<void> _loadUserId() async {
-    final authViewModel = Provider.of<AuthViewModel>(context, listen: false);
-    _userId = await authViewModel.getLoggedUserId();
-    if (mounted) setState(() {});
+  Future<void> _loadData() async {
+    final authVM = Provider.of<AuthViewModel>(context, listen: false);
+    final fastVM = Provider.of<FastingViewModel>(context, listen: false);
+
+    _userId = await authVM.getLoggedUserId();
+    if (_userId != null && mounted) {
+      _lastSession = await fastVM.getLastSession(_userId!);
+      _protocol = fastVM.protocol;
+      setState(() {});
+    }
   }
 
   @override
@@ -54,7 +62,13 @@ class _HistoryViewState extends State<HistoryView> {
               child: TabBarView(
                 children: [
                   _MealsHistoryTab(userId: _userId!),
-                  _FastingHistoryTab(userId: _userId!),
+                  if (_lastSession != null)
+                    _FastingHistoryTab(
+                      session: _lastSession!,
+                      protocol: _protocol ?? FastingProtocol.defaultProtocol,
+                    )
+                  else
+                    const Center(child: Text('Nenhum histórico de jejum')),
                 ],
               ),
             ),
@@ -79,8 +93,7 @@ class _MealsHistoryTabState extends State<_MealsHistoryTab> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        Provider.of<MealViewModel>(context, listen: false)
-            .loadMeals(widget.userId);
+        Provider.of<MealViewModel>(context, listen: false).loadMeals(widget.userId);
       }
     });
   }
@@ -119,8 +132,9 @@ class _MealsHistoryTabState extends State<_MealsHistoryTab> {
                 final meal = meals[index];
                 return ListTile(
                   title: Text(meal.name),
-                  subtitle:
-                      Text(DateFormat('dd/MM/yyyy HH:mm').format(meal.timestamp)),
+                  subtitle: Text(
+                    DateFormat('dd/MM/yyyy HH:mm').format(meal.timestamp),
+                  ),
                   trailing: Text('${meal.calories} cal'),
                 );
               },
@@ -133,58 +147,84 @@ class _MealsHistoryTabState extends State<_MealsHistoryTab> {
 }
 
 class _FastingHistoryTab extends StatelessWidget {
-  final int userId;
-  const _FastingHistoryTab({required this.userId});
+  final FastingSessionEntity session;
+  final FastingProtocol protocol;
+
+  const _FastingHistoryTab({
+    required this.session,
+    required this.protocol,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<FastingViewModel>(
-      builder: (context, fastingViewModel, _) {
-        return FutureBuilder<FastingSessionEntity?>(
-          future: fastingViewModel.getLastSession(userId),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
+    final isCompleted = session.endTime != null;
 
-            final session = snapshot.data;
-            if (session == null) {
-              return const Center(child: Text('Nenhum histórico de jejum'));
-            }
+    // Calcula duraço real
+    final actualDuration = isCompleted
+        ? session.endTime!.difference(session.startTime)
+        : DateTime.now().difference(session.startTime);
 
-            return ListView(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    'Duração do Jejum (Últimos 7 Dias)',
-                    style: Theme.of(context).textTheme.titleLarge,
+    // Margem de 3 minutos
+    final margin = const Duration(minutes: 3);
+
+    // Status de meta
+    bool isWithinMeta;
+
+    if (isCompleted) {
+      // Finalizou: verifica se atingiu a duraço do protocolo (com margem)
+      isWithinMeta =
+          actualDuration >= protocol.fastingDuration - margin;
+    } else {
+      // Ainda ativo: considera "dentro" se não houver atraso significativo
+      isWithinMeta = true; // Jejum ativo é considerado dentro da meta
+    }
+
+    final statusColor = isWithinMeta ? Colors.green : Colors.yellow;
+    final statusText = isWithinMeta ? 'Dentro da Meta' : 'Fora da Meta';
+
+    return ListView(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text(
+            'Duração do Jejum',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+        ),
+        FastingChart(sessions: [session]),
+        const SizedBox(height: 16),
+        ListTile(
+          title: const Text('Sessão de Jejum'),
+          subtitle: Text(
+            '${DateFormat('dd/MM/yyyy HH:mm').format(session.startTime)} - '
+            '${isCompleted ? DateFormat('dd/MM/yyyy HH:mm').format(session.endTime!) : 'Ativo'}',
+          ),
+          trailing: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                '${actualDuration.inHours}h ${actualDuration.inMinutes % 60}m',
+              ),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  statusText,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                FastingChart(sessions: [session]),
-                const SizedBox(height: 16),
-                ListTile(
-                  title: const Text('Sessão de Jejum'),
-                  subtitle: Text(
-                    '${DateFormat('dd/MM/yyyy').format(session.startTime)} - ${session.endTime != null ? DateFormat('dd/MM/yyyy').format(session.endTime!) : 'Ativo'}',
-                  ),
-                  trailing: Builder(
-                    builder: (context) {
-                      final duration = session.endTime != null
-                          ? session.endTime!
-                              .difference(session.startTime)
-                          : DateTime.now()
-                              .difference(session.startTime);
-                      return Text(
-                          '${duration.inHours}h ${duration.inMinutes % 60}m');
-                    },
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

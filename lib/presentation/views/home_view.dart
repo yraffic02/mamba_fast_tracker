@@ -143,7 +143,7 @@ class _HomeViewState extends State<HomeView> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Timer de Jejum',
+                      'Tempo de Jejum',
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                     Chip(
@@ -170,6 +170,23 @@ class _HomeViewState extends State<HomeView> {
                     Text(
                       'Restam: ${remaining.inHours}h ${remaining.inMinutes % 60}m',
                       style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        'Dentro da Meta',
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ] else ...[
                     const SizedBox(height: 8),
