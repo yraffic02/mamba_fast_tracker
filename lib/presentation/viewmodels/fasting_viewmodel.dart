@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../domain/entities/fasting_session_entity.dart';
 import '../../domain/entities/fasting_protocol_entity.dart';
@@ -20,6 +19,7 @@ class FastingViewModel extends ChangeNotifier {
   bool _isLoading = false;
   Timer? _timer;
   String _currentProtocol = '16:8';
+  bool _goalNotified = false;
 
   FastingSessionEntity? get currentSession => _currentSession;
   bool get isLoading => _isLoading;
@@ -63,6 +63,10 @@ class FastingViewModel extends ChangeNotifier {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (_currentSession != null && _currentSession!.endTime == null) {
+        if (isGoalReached && !_goalNotified) {
+          _goalNotified = true;
+          _notificationService.notifyFastingGoalReached();
+        }
         notifyListeners();
       }
     });
@@ -71,6 +75,7 @@ class FastingViewModel extends ChangeNotifier {
   void _stopTimer() {
     _timer?.cancel();
     _timer = null;
+    _goalNotified = false;
   }
 
   Future<void> loadActiveSession(int userId) async {
@@ -96,6 +101,15 @@ class FastingViewModel extends ChangeNotifier {
       await _startFasting(userId);
       try {
         await _notificationService.notifyFastingStarted();
+        final session = _currentSession;
+        if (session != null) {
+          final endTime = session.startTime.add(protocol.fastingDuration);
+          await _notificationService.scheduleNotification(
+            'Jejum Concluído',
+            'Seu jejum de ${protocol.name} terminou!',
+            endTime,
+          );
+        }
       } catch (_) {}
       await loadActiveSession(userId);
       return true;
@@ -115,84 +129,7 @@ class FastingViewModel extends ChangeNotifier {
       _stopTimer();
       try {
         await _notificationService.notifyFastingEnded();
-      } catch (_) {}
-      _currentSession = null;
-      _isLoading = false;
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _isLoading = false;
-      notifyListeners();
-      return false;
-    }
-  }
-
-  Future<FastingSessionEntity?> getLastSession(int userId) async {
-    return await _getLastSession(userId);
-  }
-
-  @override
-  void dispose() {
-    _stopTimer();
-    super.dispose();
-  }
-}
-
-  void _startTimer() {
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (_currentSession != null && _currentSession!.endTime == null) {
-        notifyListeners();
-      }
-    });
-  }
-
-  void _stopTimer() {
-    _timer?.cancel();
-    _timer = null;
-  }
-
-  Future<void> loadActiveSession(int userId) async {
-    _isLoading = true;
-    notifyListeners();
-
-    _currentSession = await _getActiveSession(userId);
-
-    if (_currentSession != null && _currentSession!.endTime == null) {
-      _startTimer();
-    }
-
-    _isLoading = false;
-    notifyListeners();
-  }
-
-  Future<bool> startFasting(int userId) async {
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      await _startFasting(userId);
-      try {
-        await _notificationService.notifyFastingStarted();
-      } catch (_) {}
-      await loadActiveSession(userId);
-      return true;
-    } catch (e) {
-      _isLoading = false;
-      notifyListeners();
-      return false;
-    }
-  }
-
-  Future<bool> endFasting(int userId) async {
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      await _endFasting(userId);
-      _stopTimer();
-      try {
-        await _notificationService.notifyFastingEnded();
+        await _notificationService.cancelAllNotifications();
       } catch (_) {}
       _currentSession = null;
       _isLoading = false;
