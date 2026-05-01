@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../domain/entities/meal_entity.dart';
 import '../viewmodels/meal_viewmodel.dart';
 import '../viewmodels/auth_viewmodel.dart';
+import 'edit_meal_view.dart';
 
 class MealsListView extends StatefulWidget {
   const MealsListView({super.key});
@@ -121,13 +122,22 @@ class _MealsListViewState extends State<MealsListView> {
                             const SizedBox(width: 8),
                             IconButton(
                               icon: const Icon(Icons.edit, color: Colors.blue),
-                              onPressed: () {
-                                // TODO: Navigate to edit meal view
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Editar em breve'),
+                              onPressed: () async {
+                                final updated = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        EditMealView(meal: meal),
                                   ),
                                 );
+                                if (updated == true && _userId != null) {
+                                  if (mounted) {
+                                    Provider.of<MealViewModel>(context,
+                                            listen: false)
+                                        .loadMeals(_userId!,
+                                            date: _selectedDate);
+                                  }
+                                }
                               },
                             ),
                             IconButton(
