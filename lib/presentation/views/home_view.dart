@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/fasting_viewmodel.dart';
 import '../viewmodels/meal_viewmodel.dart';
+import '../../core/services/notification_service.dart';
 import 'add_meal_view.dart';
 import 'history_view.dart';
 import 'meals_list_view.dart';
@@ -36,6 +37,13 @@ class _HomeViewState extends State<HomeView> {
     if (_userId != null) {
       await fastingViewModel.loadActiveSession(_userId!);
       await mealViewModel.loadMeals(_userId!, date: DateTime.now());
+    }
+
+    // Verifica e solicita permissão de notificações
+    final notificationService = NotificationService.instance;
+    final enabled = await notificationService.areNotificationsEnabled();
+    if (!enabled && mounted) {
+      await notificationService.requestNotificationPermissions();
     }
   }
 

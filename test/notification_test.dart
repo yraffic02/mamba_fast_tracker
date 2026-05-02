@@ -20,6 +20,7 @@ void main() async {
   // Teste 2: Notificação agendada para 2 minutos à frente
   final scheduled = DateTime.now().add(const Duration(minutes: 2));
   await NotificationService.instance.scheduleOneTimeNotification(
+    id: 1,
     title: 'Teste Agendado',
     body: 'Esta notificação deve aparecer em 2 minutos',
     scheduledDate: scheduled,
@@ -28,6 +29,7 @@ void main() async {
 
   // Teste 3: Notificação diária às 22:33
   await NotificationService.instance.scheduleDailyNotification(
+    id: 2,
     title: 'Teste Diário',
     body: 'Esta notificação deve aparecer todos os dias às 22:33',
     hour: 22,
@@ -35,6 +37,8 @@ void main() async {
   );
   print('Teste 3: Notificação diária agendada para 22:33');
 
+  int testId = 100;
+  
   runApp(MaterialApp(
     home: Scaffold(
       body: Center(

@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
@@ -13,7 +15,9 @@ void main() async {
   await initializeDateFormatting('pt_BR', null);
   try {
     await NotificationService.instance.initialize();
-  } catch (_) {}
+  } catch (e) {
+    log(e.toString());
+  }
   runApp(const MyApp());
 }
 
@@ -59,6 +63,12 @@ class _SplashScreenState extends State<SplashScreen> {
     final isLoggedIn = await authViewModel.checkSession();
 
     if (!mounted) return;
+
+    // Teste de notificação imediata
+    await NotificationService.instance.showNotification(
+      'App Iniciado',
+      'Teste de notificação imediata',
+    );
 
     if (isLoggedIn) {
       Navigator.pushReplacement(

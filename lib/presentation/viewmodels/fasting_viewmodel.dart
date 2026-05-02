@@ -105,6 +105,8 @@ class FastingViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  int _notificationId = 100; // ID base para notificações
+
   Future<bool> startFasting(int userId) async {
     final scheduledStart = await _sessionService.getScheduledStartTime();
     if (scheduledStart == null) {
@@ -127,6 +129,7 @@ class FastingViewModel extends ChangeNotifier {
           final fiveMinBeforeEnd = endTime.subtract(const Duration(minutes: 5));
           if (fiveMinBeforeEnd.isAfter(DateTime.now())) {
             await _notificationService.scheduleOneTimeNotification(
+              id: _notificationId++,
               title: 'Jejum Termina em 5min',
               body: 'Seu jejum de ${protocol.name} termina em 5 minutos!',
               scheduledDate: fiveMinBeforeEnd,
@@ -135,16 +138,34 @@ class FastingViewModel extends ChangeNotifier {
 
           // Na hora de terminar
           await _notificationService.scheduleOneTimeNotification(
+            id: _notificationId++,
             title: 'Jejum Concluído',
             body: 'Seu jejum de ${protocol.name} terminou!',
             scheduledDate: endTime,
           );
+
+          // 5min antes de começar (se agendado)
+          final fiveMinBeforeStart = scheduledStart.subtract(const Duration(minutes: 5));
+          if (fiveMinBeforeStart.isAfter(DateTime.now())) {
+            await _notificationService.scheduleOneTimeNotification(
+              id: _notificationId++,
+              title: 'Jejum Começa em 5min',
+              body: 'Seu jejum de ${protocol.name} começa em 5 minutos!',
+              scheduledDate: fiveMinBeforeStart,
+            );
+          }
+
+          // Agenda para os próximos dias (repetição diária)
+          await _scheduleDailyNotificationsForProtocol();
         }
-      } catch (_) {}
+      } catch (e) {
+        print('[FastingViewModel] Erro ao agendar notificações: $e');
+      }
       await _sessionService.clearScheduledStartTime();
       await loadActiveSession(userId);
       return true;
     } catch (e) {
+      print('[FastingViewModel] Erro ao iniciar jejum: $e');
       _isLoading = false;
       notifyListeners();
       return false;
@@ -171,6 +192,37 @@ class FastingViewModel extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  // Agenda notificações diárias para o protocolo atual
+  Future<void> _scheduleDailyNotificationsForProtocol() async {
+    final protocol = this.protocol;
+    final parts = protocol.name.split(':');
+    if (parts.length != 2) return;
+
+    final fastingHours = int.tryParse(parts[0]) ?? 16;
+    final startHour = DateTime.now().hour;
+    final startMinute = DateTime.now().minute;
+
+    // Agenda notificação de início (mesmo horário todo dia)
+    await _notificationService.scheduleDailyNotification(
+      id: _notificationId++,
+      title: 'Jejum Começa em 5min',
+      body: 'Seu jejum de ${protocol.name} começa em 5 minutos!',
+      hour: startHour,
+      minute: startMinute,
+    );
+
+    // Agenda notificação de fim (início + horas de jejum)
+    final endHour = (startHour + fastingHours) % 24;
+    final endMinute = startMinute;
+    await _notificationService.scheduleDailyNotification(
+      id: _notificationId++,
+      title: 'Jejum Termina em 5min',
+      body: 'Seu jejum de ${protocol.name} termina em 5 minutos!',
+      hour: endHour,
+      minute: endMinute,
+    );
   }
 
   Future<FastingSessionEntity?> getLastSession(int userId) async {
