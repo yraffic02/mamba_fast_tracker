@@ -7,6 +7,8 @@ import 'package:teste_tecnico_mobile/domain/entities/fasting_session_entity.dart
 import 'package:teste_tecnico_mobile/domain/entities/user_entity.dart';
 import 'package:teste_tecnico_mobile/domain/usecases/fasting_usecases.dart';
 import 'package:teste_tecnico_mobile/domain/usecases/auth_usecases.dart';
+import 'package:teste_tecnico_mobile/core/services/session_service.dart';
+import 'package:teste_tecnico_mobile/presentation/viewmodels/fasting_viewmodel.dart';
 
 void main() {
   setUpAll(() {
@@ -24,14 +26,20 @@ void main() {
     }
   });
 
-  group('Fasting Timer Tests', () {
+  group('Testes de Timer de Jejum', () {
     late GetElapsedTime getElapsedTime;
+    late StartFasting startFasting;
+    late EndFasting endFasting;
+    late SessionService sessionService;
 
     setUp(() {
       getElapsedTime = GetElapsedTime();
+      startFasting = StartFasting();
+      endFasting = EndFasting();
+      sessionService = SessionService();
     });
 
-    test('Should calculate elapsed time correctly for active session', () {
+    test('Deve calcular tempo decorrido corretamente para sessão ativa', () {
       final startTime = DateTime.now().subtract(const Duration(hours: 2, minutes: 30));
       final session = FastingSessionEntity(
         id: 1,
@@ -46,7 +54,7 @@ void main() {
       expect(elapsed!.inHours, greaterThanOrEqualTo(2));
     });
 
-    test('Should calculate elapsed time correctly for completed session', () {
+    test('Deve calcular tempo decorrido corretamente para sessão completada', () {
       final startTime = DateTime(2026, 4, 29, 10, 0);
       final endTime = DateTime(2026, 4, 29, 16, 30);
       final session = FastingSessionEntity(
@@ -64,7 +72,7 @@ void main() {
       expect(elapsed.inMinutes % 60, 30);
     });
 
-    test('Should maintain consistency after restart', () {
+    test('Deve manter consistência após reinício', () {
       final persistedStartTime = DateTime.now().subtract(const Duration(hours: 5));
       final session = FastingSessionEntity(
         id: 1,
@@ -78,10 +86,32 @@ void main() {
 
       expect(elapsed1!.inSeconds, elapsed2!.inSeconds);
     });
+
+    test('Não deve iniciar jejum sem horário agendado', () async {
+      // Garante que não há horário agendado
+      await sessionService.clearScheduledStartTime();
+      final viewModel = FastingViewModel();
+      final userId = 1;
+
+      // Tenta iniciar jejum - deve retornar false
+      final result = await viewModel.startFasting(userId);
+      expect(result, false);
+    });
+
+    test('Deve iniciar jejum com horário agendado', () async {
+      // Define horário agendado para agora
+      await sessionService.saveScheduledStartTime(DateTime.now());
+      final viewModel = FastingViewModel();
+      final userId = 1;
+
+      // Tenta iniciar jejum - deve retornar true
+      final result = await viewModel.startFasting(userId);
+      expect(result, true);
+    });
   });
 
-  group('Calorie Calculation Tests', () {
-    test('Should sum calories correctly for a day', () {
+  group('Testes de Cálculo de Calorias', () {
+    test('Deve somar calorias corretamente para um dia', () {
       const calorieGoal = 2000;
       final totalCalories = 500 + 800 + 700;
       expect(totalCalories, 2000);
@@ -89,12 +119,12 @@ void main() {
     });
   });
 
-  group('Authentication Tests', () {
+  group('Testes de Autenticação', () {
     setUp(() {
       SharedPreferences.setMockInitialValues({});
     });
 
-    test('Should validate valid login credentials', () async {
+    test('Deve validar credenciais de login válidas', () async {
       const email = 'test@example.com';
       const password = 'password123';
 
@@ -113,7 +143,7 @@ void main() {
       expect(isValid, true);
     });
 
-    test('Should reject invalid login credentials', () async {
+    test('Deve rejeitar credenciais de login inválidas', () async {
       const email = 'test@example.com';
       const wrongPassword = 'wrongpassword';
 
