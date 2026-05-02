@@ -119,10 +119,17 @@ void main() {
     });
   });
 
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    // Delete the test database before each test to avoid UNIQUE constraint
+    final dbPath = await getDatabasesPath();
+    final file = File(join(dbPath, 'mamba_fast_tracker.db'));
+    if (await file.exists()) {
+      await file.delete();
+    }
+  });
+
   group('Testes de Autenticação', () {
-    setUp(() {
-      SharedPreferences.setMockInitialValues({});
-    });
 
     test('Deve validar credenciais de login válidas', () async {
       const email = 'test@example.com';

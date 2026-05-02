@@ -225,7 +225,22 @@ class _HomeViewState extends State<HomeView> {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: _userId != null
-                        ? () => viewModel.startFasting(_userId!)
+                        ? () async {
+                            final success =
+                                await viewModel.startFasting(_userId!);
+                            if (context.mounted) {
+                              if (!success) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                        'Agende um horário de início nas Configurações'),
+                                  ),
+                                );
+                              } else {
+                                await viewModel.loadActiveSession(_userId!);
+                              }
+                            }
+                          }
                         : null,
                     child: const Text('Iniciar Jejum'),
                   ),
