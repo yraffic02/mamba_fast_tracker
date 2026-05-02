@@ -175,9 +175,9 @@ dev_dependencies:
 - **Dia 1 Terça 28/04 :** Não trabalhei.
 - **Dia 2 Quarta 29/04 (3h):** Setup inicial, arquitetura base, autenticação,  Timer de jejum, protocolos
 - **Dia 3 Quinta 30/04 :** Não trabalhei, tive problemas pessoais na familia.
-- **Dia 4 Sexta 01/05 (9h):** Protocolos, notificações, testes, refeições, histórico, gráficos,correções, CI/CD, documentação, refinamento
+- **Dia 4 Sexta 01/05 (10h):** Protocolos, notificações, testes, refeições, histórico, gráficos,correções, CI/CD, documentação, refinamento
 
-**Total:** ~18 horas
+**Total:** ~13 horas
 
 ## Build Android
 
