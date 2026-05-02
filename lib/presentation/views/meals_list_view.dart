@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/meal_viewmodel.dart';
 import 'edit_meal_view.dart';
+import 'add_meal_view.dart';
 
 class MealsListView extends StatefulWidget {
   final int userId;
@@ -54,46 +55,46 @@ class _MealsListViewState extends State<MealsListView> {
           ),
         ],
       ),
-      body: Consumer<MealViewModel>(
-        builder: (context, viewModel, _) {
-          final meals = viewModel.meals;
-          final isLoading = viewModel.isLoading;
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              'Refeições de ${DateFormat('dd/MM/yyyy').format(_selectedDate)}',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+          ),
+          Expanded(
+            child: Consumer<MealViewModel>(
+              builder: (context, viewModel, _) {
+                final meals = viewModel.meals;
+                final isLoading = viewModel.isLoading;
 
-          if (isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+                if (isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-          if (meals.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Nenhuma refeição em ${DateFormat('dd/MM/yyyy').format(_selectedDate)}',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => _pickDate(context),
-                    child: const Text('Selecionar outra data'),
-                  ),
-                ],
-              ),
-            );
-          }
+                if (meals.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Nenhuma refeição em ${DateFormat('dd/MM/yyyy').format(_selectedDate)}',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () => _pickDate(context),
+                          child: const Text('Selecionar outra data'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  'Refeições de ${DateFormat('dd/MM/yyyy').format(_selectedDate)}',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-              ),
-              Expanded(
-                child: ListView.builder(
+                return ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: meals.length,
                   itemBuilder: (context, index) {
@@ -167,11 +168,26 @@ class _MealsListViewState extends State<MealsListView> {
                       ),
                     );
                   },
-                ),
-              ),
-            ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AddMealView(userId: widget.userId),
+            ),
           );
+          if (result == true && mounted) {
+            Provider.of<MealViewModel>(context, listen: false)
+                .loadMeals(widget.userId, date: _selectedDate);
+          }
         },
+        child: const Icon(Icons.add),
       ),
     );
   }
