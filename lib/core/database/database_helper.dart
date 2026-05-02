@@ -3,7 +3,7 @@ import 'package:path/path.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
-  static Database? _database;
+  Database? _database;
 
   DatabaseHelper._init();
 
@@ -11,6 +11,15 @@ class DatabaseHelper {
     if (_database != null) return _database!;
     _database = await _initDB('mamba_fast_tracker.db');
     return _database!;
+  }
+
+  // Para testes: permite injetar banco em memória
+  Future<void> setTestDatabase(Database db) async {
+    _database = db;
+  }
+
+  Future<void> resetTestDatabase() async {
+    _database = null;
   }
 
   Future<Database> _initDB(String filePath) async {
@@ -65,7 +74,10 @@ class DatabaseHelper {
   }
 
   Future<void> close() async {
-    final db = await instance.database;
-    db.close();
+    final db = _database;
+    if (db != null) {
+      await db.close();
+      _database = null;
+    }
   }
 }

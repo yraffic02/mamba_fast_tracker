@@ -4,8 +4,11 @@ import 'package:intl/intl.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/fasting_viewmodel.dart';
 import '../viewmodels/meal_viewmodel.dart';
+import '../../core/services/notification_service.dart';
 import 'add_meal_view.dart';
 import 'history_view.dart';
+import 'meals_list_view.dart';
+import 'settings_view.dart';
 import 'auth_view.dart';
 
 class HomeView extends StatefulWidget {
@@ -35,6 +38,13 @@ class _HomeViewState extends State<HomeView> {
       await fastingViewModel.loadActiveSession(_userId!);
       await mealViewModel.loadMeals(_userId!, date: DateTime.now());
     }
+
+    // Verifica e solicita permissão de notificações
+    final notificationService = NotificationService.instance;
+    final enabled = await notificationService.areNotificationsEnabled();
+    if (!enabled && mounted) {
+      await notificationService.requestNotificationPermissions();
+    }
   }
 
   @override
@@ -55,16 +65,64 @@ class _HomeViewState extends State<HomeView> {
               }
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.history),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const HistoryView()),
-              );
-            },
-          ),
         ],
+      ),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            const DrawerHeader(
+              child: Text(
+                'Mamba Fast Tracker',
+                style: TextStyle(color: Colors.white, fontSize: 24),
+              ),
+              decoration: BoxDecoration(
+                color: Colors.green,
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.settings),
+              title: const Text('Protocolo de Jejum'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SettingsView(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.history),
+              title: const Text('Histórico'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const HistoryView(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.restaurant_menu),
+              title: const Text('Refeições'),
+              onTap: () {
+                Navigator.pop(context);
+                if (_userId != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => MealsListView(userId: _userId!),
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
+        ),
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -111,6 +169,14 @@ class _HomeViewState extends State<HomeView> {
       builder: (context, viewModel, child) {
         final isFasting = viewModel.isFasting;
         final elapsed = viewModel.elapsedTime;
+        final remaining = viewModel.remainingTime;
+        final goalReached = viewModel.isGoalReached;
+        final protocol = viewModel.protocol;
+
+        final progress = elapsed.inSeconds /
+            (protocol.fastingDuration.inSeconds == 0
+                ? 1
+                : protocol.fastingDuration.inSeconds);
 
         return Card(
           child: Padding(
@@ -118,9 +184,19 @@ class _HomeViewState extends State<HomeView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Timer de Jejum',
-                  style: Theme.of(context).textTheme.headlineSmall,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Tempo de Jejum',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    Chip(
+                      label: Text(protocol.name),
+                      backgroundColor:
+                          Theme.of(context).colorScheme.primaryContainer,
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 if (isFasting) ...[
@@ -128,6 +204,48 @@ class _HomeViewState extends State<HomeView> {
                     '${elapsed.inHours}h ${elapsed.inMinutes % 60}m ${elapsed.inSeconds % 60}s',
                     style: Theme.of(context).textTheme.displaySmall,
                   ),
+                  if (!goalReached) ...[
+                    const SizedBox(height: 8),
+                    LinearProgressIndicator(
+                      value: progress.clamp(0.0, 1.0),
+                      minHeight: 8,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Restam: ${remaining.inHours}h ${remaining.inMinutes % 60}m',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        'Dentro da Meta',
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Meta atingida! 🎉',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(
+                            color: Colors.green,
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: _userId != null
@@ -145,11 +263,29 @@ class _HomeViewState extends State<HomeView> {
                     child: const Text('Finalizar Jejum'),
                   ),
                 ] else ...[
-                  const Text('Nenhuma sessão de jejum ativa'),
+                  Text(
+                    'Protocolo: ${protocol.name} (${protocol.fastingHours}h jejum)',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: _userId != null
-                        ? () => viewModel.startFasting(_userId!)
+                        ? () async {
+                            final success =
+                                await viewModel.startFasting(_userId!);
+                            if (context.mounted) {
+                              if (!success) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                        'Agende um horário de início nas Configurações'),
+                                  ),
+                                );
+                              } else {
+                                await viewModel.loadActiveSession(_userId!);
+                              }
+                            }
+                          }
                         : null,
                     child: const Text('Iniciar Jejum'),
                   ),
@@ -192,20 +328,50 @@ class _HomeViewState extends State<HomeView> {
                 ),
                 const SizedBox(height: 16),
                 if (meals.isEmpty)
-                  const Text('Nenhuma refeição registrada hoje')
+                  Column(
+                    children: [
+                      const Text('Nenhuma refeição registrada hoje'),
+                      const SizedBox(height: 8),
+                      _buildViewAllMealsButton(),
+                    ],
+                  )
                 else
-                  ...meals.map((meal) => ListTile(
-                        title: Text(meal.name),
-                        subtitle: Text(
-                          DateFormat('HH:mm').format(meal.timestamp),
-                        ),
-                        trailing: Text('${meal.calories} cal'),
-                      )),
+                  Column(
+                    children: [
+                      ...meals.map((meal) => ListTile(
+                            title: Text(meal.name),
+                            subtitle: Text(
+                              DateFormat('HH:mm').format(meal.timestamp),
+                            ),
+                            trailing: Text('${meal.calories} cal'),
+                          )),
+                      const SizedBox(height: 8),
+                      _buildViewAllMealsButton(),
+                    ],
+                  ),
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildViewAllMealsButton() {
+    return Center(
+      child: TextButton(
+        onPressed: () {
+          if (_userId != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => MealsListView(userId: _userId!),
+              ),
+            );
+          }
+        },
+        child: const Text('Ver todas as refeições'),
+      ),
     );
   }
 }
