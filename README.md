@@ -70,7 +70,7 @@ lib/
 
 ## Decisões técnicas
 
-1. **SQLite como fonte única da verdade**
+1. **SQLite**
    - Todos os timestamps armazenados como strings ISO 8601
    - Timer recalcula tempo decorrido lendo do banco
    - App pode ser fechado e reaberto sem perda de estado
@@ -125,24 +125,22 @@ dev_dependencies:
 ## Trade-offs considerados
 
 1. **Provider vs BLoC/Redux**
-   - Escolhido Provider: simplicidade e rapidez de implementação
+   - Escolhido Provider: simplicidade e rapidez de implementação(Principalemente por usar ele mais que o Bloc)
    - BLoC seria melhor para apps muito complexos, mas overhead desnecessário aqui
 
-2. **SQLite vs Hive/SharedPreferences**
+2. **Porque usei SQLite**
    - SQLite: estruturado, suporta queries complexas, ideal para histórico
-   - Alternativas (Hive) seriam mais rápidas, mas menos flexíveis para relatórios
 
 3. **flutter_local_notifications vs Firebase Cloud Messaging**
    - Local: suficiente para necessidades atuais (offline-first)
    - Firebase seria necessário apenas para notificações push remotas
 
-4. **Timer.periodic vs Stream/Isolate**
+4. **Timer.periodic**
    - Timer.periodic: simples e suficiente para atualização de UI
-   - Stream seria overkill para um timer de 1 segundo
 
 5. **workmanager desabilitado**
-   - build issues no Android
-   - Solução atual (agendamento via timezone) funciona bem para o propósito
+   - iria usar nativo com base em uma entrega de app que fiz recente safety critical que fiz
+   - A Solução atual (agendamento via timezone) funciona bem para o propósito
 
 ## O que melhoraria com mais tempo
 
@@ -154,7 +152,6 @@ dev_dependencies:
 2. **Widgets personalizados**
    - UI mais polida (animations, transições)
    - Temas claro/escuro automático
-   - Material 3 completo
 
 3. **Recuperação de senha**
    - Atualmente apenas auth local
@@ -175,10 +172,10 @@ dev_dependencies:
 
 ## Tempo gasto no desafio
 
-- **Dia 1 (4h):** Setup inicial, arquitetura base, autenticação
-- **Dia 2 (6h):** Timer de jejum, protocolos, notificações
-- **Dia 3 (5h):** Refeições, histórico, gráficos, UI
-- **Dia 4 (3h):** Testes, correções, CI/CD, documentação, refinamento
+- **Dia 1 Terça 28/04 :** Não trabalhei.
+- **Dia 2 Quarta 29/04 (3h):** Setup inicial, arquitetura base, autenticação,  Timer de jejum, protocolos
+- **Dia 3 Quinta 30/04 :** Não trabalhei, tive problemas pessoais na familia.
+- **Dia 4 Sexta 01/05 (9h):** Protocolos, notificações, testes, refeições, histórico, gráficos,correções, CI/CD, documentação, refinamento
 
 **Total:** ~18 horas
 
