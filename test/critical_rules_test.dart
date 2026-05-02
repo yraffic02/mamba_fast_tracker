@@ -8,6 +8,7 @@ import 'package:teste_tecnico_mobile/domain/entities/user_entity.dart';
 import 'package:teste_tecnico_mobile/domain/usecases/fasting_usecases.dart';
 import 'package:teste_tecnico_mobile/domain/usecases/auth_usecases.dart';
 import 'package:teste_tecnico_mobile/core/services/session_service.dart';
+import 'package:teste_tecnico_mobile/core/database/database_helper.dart';
 import 'package:teste_tecnico_mobile/presentation/viewmodels/fasting_viewmodel.dart';
 
 void main() {
@@ -18,12 +19,38 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    // Delete the test database before each test to avoid UNIQUE constraint
-    final dbPath = await getDatabasesPath();
-    final file = File(join(dbPath, 'mamba_fast_tracker.db'));
-    if (await file.exists()) {
-      await file.delete();
-    }
+    
+    // Cria banco em memória para testes
+    final db = await databaseFactoryFfi.openDatabase(
+      inMemoryDatabasePath,
+      options: OpenDatabaseOptions(
+        version: 1,
+        onCreate: (db, version) async {
+          await db.execute('''
+            CREATE TABLE users(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              email TEXT UNIQUE NOT NULL,
+              password TEXT NOT NULL,
+              created_at TEXT NOT NULL
+            )
+          ''');
+
+          await db.execute('''
+            CREATE TABLE fasting_sessions(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_id INTEGER NOT NULL,
+              start_time TEXT NOT NULL,
+              end_time TEXT,
+              status TEXT NOT NULL,
+              FOREIGN KEY(user_id) REFERENCES users(id)
+            )
+          ''');
+        },
+      ),
+    );
+    
+    // Injeta banco em memória no DatabaseHelper
+    DatabaseHelper.instance.setTestDatabase(db);
   });
 
   group('Testes de Timer de Jejum', () {
@@ -51,8 +78,8 @@ void main() {
     });
 
     test('Deve calcular tempo decorrido corretamente para sessão completada', () {
-      final startTime = DateTime(2026, 4, 29, 10, 0);
-      final endTime = DateTime(2026, 4, 29, 16, 30);
+      final startTime = DateTime(2024, 4, 29, 10, 0);
+      final endTime = DateTime(2024, 4, 29, 16, 30);
       final session = FastingSessionEntity(
         id: 1,
         userId: 1,
@@ -115,17 +142,16 @@ void main() {
     });
   });
 
-  setUp(() async {
-    SharedPreferences.setMockInitialValues({});
-    // Delete the test database before each test to avoid UNIQUE constraint
-    final dbPath = await getDatabasesPath();
-    final file = File(join(dbPath, 'mamba_fast_tracker.db'));
-    if (await file.exists()) {
-      await file.delete();
-    }
-  });
-
   group('Testes de Autenticação', () {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      // Limpa banco em memória antes de cada teste
+      final dbPath = await getDatabasesPath();
+      final file = File(join(dbPath, 'mamba_fast_tracker.db'));
+      if (await file.exists()) {
+        await file.delete();
+      }
+    });
 
     test('Deve validar credenciais de login válidas', () async {
       const email = 'test@example.com';
@@ -151,6 +177,7 @@ void main() {
       const wrongPassword = 'wrongpassword';
 
       final loginUser = LoginUser();
+
       final isValid = await loginUser(email, wrongPassword);
 
       expect(isValid, false);
