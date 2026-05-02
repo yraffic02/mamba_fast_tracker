@@ -40,7 +40,7 @@ class NotificationService {
     
     if (androidPlugin != null) {
       final notifPermission = await androidPlugin.requestNotificationsPermission();
-      final exactAlarmPermission = await androidPlugin.requestExactAlarmsPermission();
+      await androidPlugin.requestExactAlarmsPermission();
       return notifPermission ?? false;
     }
     return true;

@@ -28,14 +28,10 @@ void main() {
 
   group('Testes de Timer de Jejum', () {
     late GetElapsedTime getElapsedTime;
-    late StartFasting startFasting;
-    late EndFasting endFasting;
     late SessionService sessionService;
 
     setUp(() {
       getElapsedTime = GetElapsedTime();
-      startFasting = StartFasting();
-      endFasting = EndFasting();
       sessionService = SessionService();
     });
 
