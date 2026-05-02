@@ -5,7 +5,7 @@
     <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
-        android:label="teste_tecnico_mobile"
+        android:label="Mamba Fast Tracker"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
