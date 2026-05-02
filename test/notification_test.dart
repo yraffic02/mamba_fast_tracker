@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:timezone/data/latest.dart' as tz_init;
 import 'package:timezone/timezone.dart' as tz;
-import 'core/services/notification_service.dart';
+import 'package:teste_tecnico_mobile/core/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,10 +35,33 @@ void main() async {
   );
   print('Teste 3: Notificação diária agendada para 22:33');
 
-  runApp(const MaterialApp(
+  runApp(MaterialApp(
     home: Scaffold(
       body: Center(
-        child: Text('Verifique as notificações!'),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('Verifique as notificações!'),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () async {
+                await NotificationService.instance.showNotification(
+                  'Teste Botão',
+                  'Notificação via botão',
+                );
+              },
+              child: const Text('Enviar Notificação Agora'),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () async {
+                await NotificationService.instance.cancelAllNotifications();
+                print('Todas as notificações canceladas');
+              },
+              child: const Text('Cancelar Todas'),
+            ),
+          ],
+        ),
       ),
     ),
   ));
