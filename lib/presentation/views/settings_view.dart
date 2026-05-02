@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/fasting_protocol_entity.dart';
 import '../viewmodels/fasting_viewmodel.dart';
+import '../../core/services/notification_service.dart';
 
 class SettingsView extends StatefulWidget {
   const SettingsView({super.key});
@@ -39,28 +40,35 @@ class _SettingsViewState extends State<SettingsView> {
         context: context,
         initialTime: TimeOfDay.fromDateTime(now),
       );
-      if (time != null && mounted) {
-        setState(() {
-          _scheduledStartTime = DateTime(
-            picked.year,
-            picked.month,
-            picked.day,
-            time.hour,
-            time.minute,
-          );
-        });
-        final viewModel =
-            Provider.of<FastingViewModel>(context, listen: false);
-        await viewModel.saveScheduledStartTime(_scheduledStartTime!);
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                  'Jejum agendado para ${DateFormat('dd/MM/yyyy HH:mm').format(_scheduledStartTime!)}'),
-            ),
-          );
-        }
-      }
+                if (time != null && mounted) {
+                setState(() {
+                  _scheduledStartTime = DateTime(
+                    picked.year,
+                    picked.month,
+                    picked.day,
+                    time.hour,
+                    time.minute,
+                  );
+                });
+                final viewModel =
+                    Provider.of<FastingViewModel>(context, listen: false);
+                await viewModel.saveScheduledStartTime(_scheduledStartTime!);
+                // Agenda notificação diária
+                await NotificationService.instance.scheduleDailyNotification(
+                  title: 'Jejum Começa em 5min',
+                  body: 'Seu jejum de ${viewModel.currentProtocol} começa em 5 minutos!',
+                  hour: time.hour,
+                  minute: time.minute - 5,
+                );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                          'Jejum agendado para ${DateFormat('dd/MM/yyyy HH:mm').format(_scheduledStartTime!)}'),
+                    ),
+                  );
+                }
+              }
     }
   }
 

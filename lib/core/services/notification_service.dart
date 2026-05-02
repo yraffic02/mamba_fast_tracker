@@ -1,19 +1,19 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/data/latest.dart' as tz_init;
 import 'package:timezone/timezone.dart' as tz;
 
-typedef NotificationCallback = void Function(NotificationResponse);
-
 class NotificationService {
-  static final NotificationService instance = NotificationService._init();
-  final FlutterLocalNotificationsPlugin _notifications =
-      FlutterLocalNotificationsPlugin();
+  static final NotificationService instance = NotificationService._internal();
+  late FlutterLocalNotificationsPlugin _notifications;
 
-  NotificationService._init();
+  NotificationService._internal() {
+    _notifications = FlutterLocalNotificationsPlugin();
+  }
 
   Future<void> initialize() async {
-    tz.initializeTimeZones();
-    tz.setLocalLocation(tz.getLocation('America/Sao_Paulo'));
+    tz_init.initializeTimeZones();
+    final location = tz.getLocation('America/Sao_Paulo');
+    tz.setLocalLocation(location);
 
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings();
@@ -25,10 +25,11 @@ class NotificationService {
       settings,
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
+    print('NotificationService: initialized with timezone');
   }
 
   void _onNotificationTapped(NotificationResponse response) {
-    // Handle notification tap
+    print('Notification tapped: ${response.payload}');
   }
 
   Future<void> showNotification(String title, String body) async {
@@ -38,6 +39,8 @@ class NotificationService {
       channelDescription: 'Notifications for fasting tracker',
       importance: Importance.max,
       priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
     );
     const iosDetails = DarwinNotificationDetails();
     const details = NotificationDetails(
@@ -50,13 +53,26 @@ class NotificationService {
       body,
       details,
     );
+    print('Notification sent: $title');
   }
 
-  Future<void> scheduleNotification(
-    String title,
-    String body,
-    DateTime scheduledDate,
-  ) async {
+  Future<void> scheduleDailyNotification({
+    required String title,
+    required String body,
+    required int hour,
+    required int minute,
+  }) async {
+    // Cancel previous notifications with same title to avoid duplicates
+    await _notifications.cancelAll();
+
+    final now = DateTime.now();
+    var scheduledDate = DateTime(now.year, now.month, now.day, hour, minute);
+
+    // If time already passed today, schedule for tomorrow
+    if (scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+
     final tz.TZDateTime tzScheduledDate = tz.TZDateTime.from(
       scheduledDate,
       tz.local,
@@ -68,6 +84,45 @@ class NotificationService {
       channelDescription: 'Notifications for fasting tracker',
       importance: Importance.max,
       priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
+    );
+    const iosDetails = DarwinNotificationDetails();
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await _notifications.zonedSchedule(
+      DateTime.now().millisecond,
+      title,
+      body,
+      tzScheduledDate,
+      details,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+    print('Daily notification scheduled: $title at $hour:${minute.toString().padLeft(2, '0')} (${tzScheduledDate.toIso8601String()})');
+  }
+
+  Future<void> scheduleOneTimeNotification({
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+  }) async {
+    final tz.TZDateTime tzScheduledDate = tz.TZDateTime.from(
+      scheduledDate,
+      tz.local,
+    );
+
+    const androidDetails = AndroidNotificationDetails(
+      'mamba_fast_tracker',
+      'Mamba Fast Tracker',
+      channelDescription: 'Notifications for fasting tracker',
+      importance: Importance.max,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
     );
     const iosDetails = DarwinNotificationDetails();
     const details = NotificationDetails(
@@ -83,10 +138,12 @@ class NotificationService {
       details,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
+    print('One-time notification scheduled: $title at ${tzScheduledDate.toIso8601String()})');
   }
 
   Future<void> cancelAllNotifications() async {
     await _notifications.cancelAll();
+    print('All notifications cancelled');
   }
 
   Future<void> notifyFastingStarted() async {
