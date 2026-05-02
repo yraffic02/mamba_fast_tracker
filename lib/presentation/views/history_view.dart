@@ -180,7 +180,7 @@ class _FastingHistoryTab extends StatelessWidget {
       isWithinMeta = true; // Jejum ativo é considerado dentro da meta
     }
 
-    final statusColor = isWithinMeta ? Colors.green : Colors.yellow;
+    final statusColor = isWithinMeta ? Colors.green : Colors.redAccent;
     final statusText = isWithinMeta ? 'Dentro da Meta' : 'Fora da Meta';
 
     return ListView(
