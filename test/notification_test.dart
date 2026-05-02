@@ -15,7 +15,7 @@ void main() async {
     'Teste Imediato',
     'Esta notificação deve aparecer agora',
   );
-  print('Teste 1: Notificação imediata enviada');
+  debugPrint('Teste 1: Notificação imediata enviada');
 
   // Teste 2: Notificação agendada para 2 minutos à frente
   final scheduled = DateTime.now().add(const Duration(minutes: 2));
@@ -25,7 +25,7 @@ void main() async {
     body: 'Esta notificação deve aparecer em 2 minutos',
     scheduledDate: scheduled,
   );
-  print('Teste 2: Notificação agendada para $scheduled');
+  debugPrint('Teste 2: Notificação agendada para $scheduled');
 
   // Teste 3: Notificação diária às 22:33
   await NotificationService.instance.scheduleDailyNotification(
@@ -35,10 +35,8 @@ void main() async {
     hour: 22,
     minute: 33,
   );
-  print('Teste 3: Notificação diária agendada para 22:33');
+  debugPrint('Teste 3: Notificação diária agendada para 22:33');
 
-  int testId = 100;
-  
   runApp(MaterialApp(
     home: Scaffold(
       body: Center(
@@ -60,7 +58,7 @@ void main() async {
             ElevatedButton(
               onPressed: () async {
                 await NotificationService.instance.cancelAllNotifications();
-                print('Todas as notificações canceladas');
+                debugPrint('Todas as notificações canceladas');
               },
               child: const Text('Cancelar Todas'),
             ),
